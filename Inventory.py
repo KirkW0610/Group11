@@ -12,8 +12,8 @@ class InvItem:
         return self.quanity
     
     def __str__(self):
-        str = +self.name+self.quanity+"\n"
-        return str
+        string = str(self.name)+str(self.quanity)+"\n"
+        return string
 
 #Manages inventory using dictionary
 #Also saves inventory to a text file in place of using a database, since we don't currently have that implimented
@@ -22,11 +22,13 @@ class Inventory:
         #Reads/creates a text file to save the inventory to
         self.currInv = open("Inventory.txt","w+")
         self.currInvList = {}
-        tempList = self.currInv.read.split()
-        #Puts the inventory into a dictionary
-        for i in range(len(tempList)):
-            self.currInvList[tempList[i]] = tempList[i+1]
-            i += 1
+        x = self.currInv.read()
+        if x != None:
+            tempList = str(x).split()
+            #Puts the inventory into a dictionary
+            for i in range(len(tempList)-1):
+                self.currInvList[tempList[i]] = tempList[i+1]
+                i += 1
 
     #Adds items/quanities to the dictionary and also to the text file
     def addItem(self,name,quanity):
@@ -36,11 +38,11 @@ class Inventory:
 
     #Prints the quantity of a specific item
     def currQuantity(self,name):
-        print(name+"\t"+self.currInvList[name])
+        print(str(name)+"\t"+str(self.currInvList[name]))
 
     #Prints whole inventory
-    def printInv(self):
+    def __str__(self):
         i = 1 
         for x in self.currInvList:
-            print(i+"."+" "+x+"\t"+self.currInvList[x])
+            print(str(i)+"."+" "+str(x)+"\t"+str(self.currInvList[x]))
             i += 1
