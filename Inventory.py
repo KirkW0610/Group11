@@ -20,7 +20,7 @@ class InvItem:
 class Inventory:
     def __init__(self):
         #Reads/creates a text file to save the inventory to
-        self.currInv = open("Inventory.txt","w+")
+        self.currInv = open("Inventory.txt","a+")
         self.currInvList = {}
         x = self.currInv.read()
         if x != None:
