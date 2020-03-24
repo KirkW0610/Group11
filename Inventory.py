@@ -46,3 +46,20 @@ class Inventory:
         for x in self.currInvList:
             print(str(i)+"."+" "+str(x)+"\t"+str(self.currInvList[x]))
             i += 1
+
+    #updates inventory.txt file
+    def changeInv(self):
+        self.currInv = open("Inventory.txt","w")
+        for x in self.currInvList:    
+            self.currInv.write(str(x)+str(self.currInvList[x])+"\n")
+        self.currInv = open("Inventory.txt","a")
+
+    #Update quantity of an item
+    def changeQuantity(self,name,newQuanity):
+        self.currInvList[name] = newQuanity
+        self.changeInv()
+    
+    def delItem(self,name):
+        del self.currInvList[name]
+        self.changeInv()
+    
