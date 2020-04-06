@@ -1,129 +1,112 @@
-##Object for retrieving and storing data. Currently implemented to use a .csv file for storage.
-##Function names and signatures will likely change over time, but not drastically.
-##This applies even when the transition is made to database storage.
+##Object for retrieving and storing data. Connects to a (currently local) mySQL database.
+##Function names and signatures should be final.
+##Instantiate one of these objects to connect to a database, then use the functions within
+##To modify the data stored in the database.
+##WARNING: USE .CLOSE() ON THIS OBJECT BEFORE THE PROGRAM CLOSES OR YOU INSTANTIATE ANOTHER
+##SIMILAR OBJECT
 from Order import Item
 from Order import Order
 from tempfile import mkstemp
 from shutil import move
 from os import fdopen, remove
 import csv
+import mysql.connector
 
-class OrderIO:
-    def __init__(self, fn):
-        self.filename = fn
+class OrderIOLink:
+    def __init__(self):
+        try:
+            self.cnx = mysql.connector.connect(user='program',
+                                          password = 'WR7RovyDbtLEpuvBPhVi',
+                                          host = '127.0.0.1',
+                                          database = 'ordersystem')
 
-    def getNewOrderID(self):
-        ##Fetches next historically unused OrderID in the database.
-        with open(self.filename, newline='') as csvfile:
-            read = csv.reader(csvfile, delimiter="`", quotechar = '|')
-            nextnum = -1
-            for row in read:
-                for i in row:
-                    attributes = i.split("`")
-                    if(int(attributes[0]) > nextnum):
-                        nextnum = int(attributes[0])
-            nextnum = nextnum + 1
-        return nextnum
+            self.cursor = self.cnx.cursor(buffered=True)
+
+        except:
+            print("An error has occured in the OrderIOLink connection process.")
+            self.cursor.close()
+            self.cnx.close()
+
+    def close(self):
+        self.cursor.close()
+        self.cnx.close()
 
     def getOrder(self, oid):
-        ##Returns an order of the given ID in the database.
-        with open(self.filename, newline='') as csvfile:
-            read = csv.reader(csvfile, delimiter="`", quotechar = '|')
-            for row in read:
-                for i in row:
-                    attributes = i.split("`")
-                    if (int(attributes[0]) == oid):
-                        return self.parseRowItems(i)
-            print("Error: No order of id " + str(oid))
+
+        ##Construct Empty Order
+        querystep = "SELECT * from orderlist WHERE orderid = " + str(oid)
+
+        self.cursor.execute(querystep)
+
+        response = self.cursor.fetchall()
+
+        r = response[0]
+
+        orderout = Order(r[1], r[0])
+
+        if(r[2] == 0):
+            orderout.setActive(False)
+            
+        if(r[3] == 1):
+            orderout.setWorking(True)
+
+        ##Construct Item Set
+        querystep = "SELECT * from itemslist WHERE OwnerOrder = " + str(oid)
+
+        self.cursor.execute(querystep)
+
+        response = self.cursor.fetchall()
+
+        for r in response:
+            ri = Item(r[1], r[3], r[2], r[4])
+            orderout.addItem(ri)
+            
+        return orderout
+
+    def addOrder(self, o):
+        ##Adds order to database, and then passes back its orderID.
+        ##Use this with newly created orders that have not been comitted yet.
+
+        querystep = ("INSERT INTO orderlist (recipient, active, working) VALUES " +
+                    "(%s, %s, %s)")
+
+        
+
+        data = (o.recipient, o.active, o.working)
+
+        self.cursor.execute(querystep, data)
+        freshid = self.cursor.lastrowid
+
+        for i in o.items:
+            querystep = ("INSERT INTO itemslist VALUES (%s, %s, %s, %s, %s)")
+            data = (str(freshid), i.name, str(i.qty), str(i.price), i.request)
+
+            self.cursor.execute(querystep, data)
+
+        self.cnx.commit()
 
     def removeOrder(self, oid):
-        ##Removes an order from the database. (Not something we want to be doing)
-        ##super often for anything other than testing.)
-        desiredsubstring = "|" + str(oid) + "`"
-        temp, closeable = mkstemp()
-        with fdopen(temp,'w') as newfile:
-            with open(self.filename) as oldfile:
-                for row in oldfile:
-                    if desiredsubstring in row:
-                        continue
-                    else:
-                        newfile.write(row)
-        remove(self.filename)
-        move(closeable, self.filename)
-        return 
+        
+        ##Remove Order From Database. Not something we want to be doing a whole lot.
+        ##Consider Setting the "active" status of an order to "False" instead,
+        ##so data can be preserved for later analysis. Order "Age of Death" will be
+        ##implemented later.
 
-    def updateOrder(self, o):
-        ##Updates an order. Use getOrder before this, edit that order, then pass
-        ##it into this function for proper functionality.
-        self.removeOrder(o.orderID)
-        self.orderAppend(o)       
-                
+        ##Start by deleting all "children" items of the order.
+        querystep = "DELETE FROM itemslist WHERE OwnerOrder = " + str(oid)
+        
+        self.cursor.execute(querystep)
 
-    def orderAppend(self, o):
-        ##Adds an order to the bottom of the database. Only pass orders with
-        ##IDs of -1 into this if calling directly. Use updateOrder() for orders
-        ##that are already in the list.
-        with open(self.filename, 'a', newline='') as csvfile:
-            write = csv.writer(csvfile, delimiter = '`', quotechar = '|', quoting=csv.QUOTE_MINIMAL)
-            stuffeditems = ""
-            if(o.orderID < 0):
-                oID = self.getNewOrderID()
-            else:
-                oID = o.orderID
-            
-            for i in o.items:
-                stuffeditems += '$' + str(i.name) + ';' + str(i.price) + ';' + str(i.qty) + ';' + i.request
+        querystep = "DELETE FROM orderlist WHERE orderid = " + str(oid)
 
-            sline = (str(oID) + '`' + str(o.active) + '`' + 
-                     str(o.recipient) + '`' + str(o.price) + '`' + str(o.working) + '`' + stuffeditems)
-            write.writerow([sline])
-            
-            return oID
+        self.cursor.execute(querystep)
 
-    def orderReadAll(self):
-        ##Reads all orders in database. This will not be available once we move
-        ##away from File I/O for storage, as we must anticipate truly large
-        ##volumes.
-        with open(self.filename, newline='') as csvfile:
-            read = csv.reader(csvfile, delimiter='`', quotechar = '|')
-            orderlist = []
-            for row in read:
-                for i in row:
-                    orderlist.append(self.parseRowItems(i))
+        self.cnx.commit()
+    
 
-            for o in orderlist:
-                print(o)
-
-            return orderlist
-
-    def orderReadAllActive(self):
-        ##Reads only active orders from database.
-        with open(self.filename, newline='') as csvfile:
-            read = csv.reader(csvfile, delimiter='`', quotechar = '|')
-            orderlist = []
-            for row in read:
-                for i in row:
-                    if i[0] != False:
-                        orderlist.append(self.parseRowItems(i))
-
-            for o in orderlist:
-                print(o)
-
-            return orderlist
-
-    def parseRowItems(self, rowstring):
-        ##Turns a row in the database into an object. This is a helper function.
-        ##Use getOrder() for practical purposes.
-        foundoid = int(rowstring.split("`")[0])
-        oi = Order(rowstring.split("`")[2], foundoid)
-        itemstart = rowstring.find('$')
-        itemslice = rowstring[itemstart:]
-        splits = itemslice.split("$")
-        splits.pop(0)
-        for i in splits:
-            itemattributes = i.split(";")
-            item = Item(itemattributes[0], float(itemattributes[1]), int(itemattributes[2]), itemattributes[3])
-            oi.addItem(item)
-            
-        return oi
-
+###################################################
+try:
+    link = OrderIOLink()
+    print(link.getOrder(18))
+finally:
+    link.close()

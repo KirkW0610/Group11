@@ -18,16 +18,16 @@ class Order:
         items = ""
         for i in self.items:
             items += ("\t" + "Item: " + i.name + "\n" +
-                     "\t" + "Price: " + str(i.price) + "\n" +
+                     "\t" + "Price: " + "{:.2f}".format(i.price) + "\n" +
                      "\t" + "Quantity: " + str(i.qty) + "\n" +
                      "\t" + "Special Requests: " + i.request + "\n" +
                      "\t" + "+++++++++++" + "\n")
                      
         out = ("Order ID: " + str(self.orderID) + "\n" +
               "Recipient: " + str(self.recipient) + "\n" +
-              "Price: " + str(self.price) + "\n" +
-              "Working: " + str(self.working) + "\n" +
+              "Price: " + "{:.2f}".format(self.price) + "\n" +
               "Active: " +str(self.active) + "\n" +
+              "Working: " + str(self.working) + "\n" +
               "Items: " + "{\n" + items + "}\n")
 
         return out
