@@ -102,11 +102,41 @@ class OrderIOLink:
         self.cursor.execute(querystep)
 
         self.cnx.commit()
+
+    def updateOrder(self, o):
+        ##UPDATES an order already in the orderlist with information from the order
+        ##passed in. Use getOrder to construct the order first, then modify that
+        ##object to pass in here.
+
+        querystep = ("UPDATE orderlist SET recipient = %s, active = %s, working = %s" +
+                     " WHERE orderid = %s")
+
+        data = (o.recipient, o.active, o.working, o.orderID)
+
+        self.cursor.execute(querystep, data)
+
+        querystep = "DELETE FROM itemslist WHERE OwnerOrder = " + str(o.orderID)
+
+        self.cursor.execute(querystep)
+
+        for i in o.items:
+            querystep = ("INSERT INTO itemslist VALUES (%s, %s, %s, %s, %s)")
+            
+            data = (o.orderID, i.name, str(i.qty), str(i.price), i.request)
+
+            self.cursor.execute(querystep, data)
+
+        self.cnx.commit()
     
 
 ###################################################
 try:
     link = OrderIOLink()
+    o1 = link.getOrder(18)
+    o1.recipient = "Craig"
+    i1 = Item("hamburger", 1.55, 33, "all mustard")
+    o1.items[0] = i1
+    link.updateOrder(o1)
     print(link.getOrder(18))
 finally:
     link.close()
