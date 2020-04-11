@@ -1,14 +1,18 @@
 class InvItem:
-    def __init__(self,n,q):
+    def __init__(self,n,q,i = -1):
         self.name = n
-        self.quanity = q
+        self.quantity = q
+        self.id = i  ##Let the backend handle this field.
 
     def getName(self):
         return self.name
     
-    def getQuanity(self):
-        return self.quanity
+    def getQuantity(self):
+        return self.quantity
+
+    def getID(self):
+        return self.id
     
     def __str__(self):
-        str = +self.name+self.quanity+"\n"
-        return str
+        string = str(self.name)+str(self.quantity)+"\n"
+        return string

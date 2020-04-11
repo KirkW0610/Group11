@@ -6,10 +6,7 @@
 ##SIMILAR OBJECT
 from Order import Item
 from Order import Order
-from tempfile import mkstemp
-from shutil import move
-from os import fdopen, remove
-import csv
+from InvItem import InvItem
 import mysql.connector
 
 class OrderIOLink:
@@ -42,6 +39,10 @@ class OrderIOLink:
 
         r = response[0]
 
+        if(len(response) == 0):
+            print("No orders by that ID.")
+            return
+
         orderout = Order(r[1], r[0])
 
         if(r[2] == 0):
@@ -62,6 +63,24 @@ class OrderIOLink:
             orderout.addItem(ri)
             
         return orderout
+
+    def checkWork(self, o):
+        ##Checks if the order has working set to True. Helper function to make sure
+        ##No orders get updated while kitchenside is working on them.
+
+        querystep = "SELECT working FROM orderlist WHERE orderid = " + str(o.orderID)
+
+        self.cursor.execute(querystep)
+
+        response = self.cursor.fetchall()
+
+        r = response[0]
+
+        if(r[0] == 0):
+            return False
+
+        else:
+            return True
 
     def addOrder(self, o):
         ##Adds order to database, and then passes back its orderID.
@@ -106,7 +125,12 @@ class OrderIOLink:
     def updateOrder(self, o):
         ##UPDATES an order already in the orderlist with information from the order
         ##passed in. Use getOrder to construct the order first, then modify that
-        ##object to pass in here.
+        ##object to pass in here. Restricted to use while order is not being worked.
+
+        if(self.checkWork(o) == True):
+            print("Order is already being worked on, and cannot be updated any longer.")
+            return
+        
 
         querystep = ("UPDATE orderlist SET recipient = %s, active = %s, working = %s" +
                      " WHERE orderid = %s")
@@ -127,16 +151,87 @@ class OrderIOLink:
             self.cursor.execute(querystep, data)
 
         self.cnx.commit()
-    
 
+    def updateOrderWorkingState(self, o):
+        ##Allows a user to update an order's working state. This is for use in the
+        ##kitchen, and to rectify possible errors in marking an order.
+
+        if(o.working == True):
+            v = 1
+
+        else:
+            v = 0
+
+        querystep = ("UPDATE orderlist SET working = %s WHERE orderid = %s")
+
+        data = (v, o.orderID)
+
+        self.cursor.execute(querystep, data)
+
+        self.cnx.commit()
+
+    def getInvItem(self, name):
+        ##retrieves an InvItem object by name.
+        
+        querystep = ("SELECT * from inventory WHERE iname = %s")
+
+        data = (name, )
+
+        self.cursor.execute(querystep, data)
+
+        response = self.cursor.fetchall()
+
+        if(len(response) == 0):
+            print("No results by that name.")
+            return
+
+        r = response[0]
+
+        ri = InvItem(r[1], r[2], r[0]);
+
+        return ri;
+
+    def addInvItem(self, inv):
+        ##Add an item to the inventory. NOTE:: pass in an InvItem object!
+        querystep = ("INSERT INTO inventory (iname, quantity) VALUES (%s, %s)")
+
+        data = (inv.getName(), inv.getQuantity())
+        try:
+            self.cursor.execute(querystep, data)
+
+        except mysql.connector.IntegrityError as err:
+            return "Already Exists!"
+
+        self.cnx.commit()
+
+    def removeInvItem(self, inv):
+        ##Remove an item from the inventory. NOTE:: pass in an InvItem object!
+
+        querystep = ("DELETE FROM inventory WHERE iname = %s")
+
+        data = (inv.getName(), )
+
+        self.cursor.execute(querystep, data)
+    
+        self.cnx.commit()
+
+    def updateInvItem(self, inv):
+        ##Update any inventory item. All fields can be changed except for the ID, which is
+        ##used to identify the item in the database.
+
+        querystep = ("UPDATE inventory SET iname = %s, quantity = %s WHERE idinventory = %s")
+
+        data = (inv.getName(), inv.getQuantity(), inv.getID())
+
+        self.cursor.execute(querystep, data)
+
+        self.cnx.commit()
+        
 ###################################################
 try:
     link = OrderIOLink()
-    o1 = link.getOrder(18)
-    o1.recipient = "Craig"
-    i1 = Item("hamburger", 1.55, 33, "all mustard")
-    o1.items[0] = i1
-    link.updateOrder(o1)
-    print(link.getOrder(18))
+    o1 = link.getOrder(2)
+    o1.recipient = "Alice"
+    link.updateOrder(o1);
 finally:
     link.close()
