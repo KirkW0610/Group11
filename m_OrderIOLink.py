@@ -64,6 +64,22 @@ class OrderIOLink:
             
         return orderout
 
+    def getAllActiveOrders(self):
+        ##returns a list of all active orders.
+
+        output = []
+
+        querystep = "SELECT orderid from orderlist WHERE active = 1"
+
+        self.cursor.execute(querystep)
+
+        response = self.cursor.fetchall()
+
+        for r in response:
+            output.append(self.getOrder(r[0]))
+
+        return output
+        
     def checkWork(self, o):
         ##Checks if the order has working set to True. Helper function to make sure
         ##No orders get updated while kitchenside is working on them.
@@ -191,6 +207,7 @@ class OrderIOLink:
 
         return ri;
 
+
     def addInvItem(self, inv):
         ##Add an item to the inventory. NOTE:: pass in an InvItem object!
         querystep = ("INSERT INTO inventory (iname, quantity) VALUES (%s, %s)")
@@ -230,8 +247,8 @@ class OrderIOLink:
 ###################################################
 try:
     link = OrderIOLink()
-    o1 = link.getOrder(2)
-    o1.recipient = "Alice"
-    link.updateOrder(o1);
+    o1 = link.getAllActiveOrders()
+    for o in o1:
+        print(o)
 finally:
     link.close()
