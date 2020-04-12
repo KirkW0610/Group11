@@ -1,5 +1,5 @@
-##Object for retrieving and storing data. Connects to a (currently local) mySQL database.
-##Function names and signatures should be final.
+##Object for retrieving and storing data. Connects to a mySQL database.
+##Function names and signatures are final.
 ##Instantiate one of these objects to connect to a database, then use the functions within
 ##To modify the data stored in the database.
 ##WARNING: USE .CLOSE() ON THIS OBJECT BEFORE THE PROGRAM CLOSES OR YOU INSTANTIATE ANOTHER
@@ -13,16 +13,17 @@ class OrderIOLink:
     def __init__(self):
         try:
             self.cnx = mysql.connector.connect(user='program',
-                                          password = 'WR7RovyDbtLEpuvBPhVi',
-                                          host = '127.0.0.1',
-                                          database = 'ordersystem')
-
+                    password = 'WR7RovyDbtLEpuvBPhVi',
+                    host = 'ordersysteminstance.cfas0wvwh98j.us-east-2.rds.amazonaws.com',
+                    database = 'ordersystem')
+            
             self.cursor = self.cnx.cursor(buffered=True)
 
         except:
             print("An error has occured in the OrderIOLink connection process.")
             self.cursor.close()
             self.cnx.close()
+            return
 
     def close(self):
         self.cursor.close()
@@ -247,6 +248,12 @@ class OrderIOLink:
 ###################################################
 try:
     link = OrderIOLink()
+    o1 = Order("Daniel")
+    i1 = Item("Hot Dog", 1.20, 2, "No mustard.")
+    i2 = Item("Soda", .75, 1)
+    o1.addItem(i1)
+    o1.addItem(i2)
+    link.addOrder(o1)
     o1 = link.getAllActiveOrders()
     for o in o1:
         print(o)
