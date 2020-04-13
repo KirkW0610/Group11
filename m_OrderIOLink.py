@@ -4,6 +4,10 @@
 ##To modify the data stored in the database.
 ##WARNING: USE .CLOSE() ON THIS OBJECT BEFORE THE PROGRAM CLOSES OR YOU INSTANTIATE ANOTHER
 ##SIMILAR OBJECT
+
+##to set up this program, please run the following pip command in your python directory:
+##pip install -r requirements.txt
+##to install the mysql connector from oracle as well as dnspython that it relies on.
 from Order import Item
 from Order import Order
 from InvItem import InvItem
@@ -248,12 +252,6 @@ class OrderIOLink:
 ###################################################
 try:
     link = OrderIOLink()
-    o1 = Order("Daniel")
-    i1 = Item("Hot Dog", 1.20, 2, "No mustard.")
-    i2 = Item("Soda", .75, 1)
-    o1.addItem(i1)
-    o1.addItem(i2)
-    link.addOrder(o1)
     o1 = link.getAllActiveOrders()
     for o in o1:
         print(o)
