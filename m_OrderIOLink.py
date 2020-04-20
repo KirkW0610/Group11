@@ -129,13 +129,10 @@ class OrderIOLink:
         
         ##Remove Order From Database. Not something we want to be doing a whole lot.
         ##Consider Setting the "active" status of an order to "False" instead,
-        ##so data can be preserved for later analysis. Order "Age of Death" will be
-        ##implemented later.
+        ##so data can be preserved for later analysis.
 
-        ##Start by deleting all "children" items of the order.
-        querystep = "DELETE FROM itemslist WHERE OwnerOrder = " + str(oid)
-        
-        self.cursor.execute(querystep)
+        ##DELETE CASCADE is in effect. Deleting the order will also delete all items
+        ##from that order, with no extra queries required
 
         querystep = "DELETE FROM orderlist WHERE orderid = " + str(oid)
 
@@ -248,12 +245,21 @@ class OrderIOLink:
         self.cursor.execute(querystep, data)
 
         self.cnx.commit()
+
+    def getAllInvItems(self):
+        ##Get all inventory items. For display use.
+
+        output = []
+
+        querystep = "SELECT * from inventory"
+
+        self.cursor.execute(querystep)
+
+        response = self.cursor.fetchall()
+
+        for r in response:
+            output.append(InvItem(r[1], r[2], r[0]))
+
+        return output
         
 ###################################################
-try:
-    link = OrderIOLink()
-    o1 = link.getAllActiveOrders()
-    for o in o1:
-        print(o)
-finally:
-    link.close()
